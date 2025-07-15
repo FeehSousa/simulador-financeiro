@@ -1,0 +1,99 @@
+.toast-notification {
+  position: fixed;
+  top: 20px; 
+  right: 20px;
+  padding: 12px 20px;
+  border-radius: 4px;
+  color: white;
+  z-index: 1000;
+  animation: slideInDown 0.3s ease-out; 
+  max-width: 300px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Tipos de toast */
+.toast-success {
+  background-color: #4CAF50;
+}
+
+.toast-error {
+  background-color: #f44336;
+}
+
+.toast-warning {
+  background-color: #ff9800;
+}
+
+.toast-info {
+  background-color: #2196F3;
+}
+
+/* Ícones (opcional) - pode usar Font Awesome ou outro */
+.toast-notification::before {
+  font-family: 'Font Awesome', sans-serif;
+  font-size: 18px;
+}
+
+.toast-success::before {
+  content: '✔'; /* Ícone de check */
+}
+
+.toast-error::before {
+  content: '✖';
+}
+
+.toast-warning::before {
+  content: '⚠'; /* Ícone de alerta */
+}
+
+.toast-info::before {
+  content: 'ℹ'; /* Ícone de informação */
+}
+
+@keyframes slideInDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Animação de entrada */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Animação de saída (para quando remover o toast) */
+.toast-fade-out {
+  animation: fadeOut 0.5s ease forwards;
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+
+/* Responsividade */
+@media (max-width: 600px) {
+  .toast-notification {
+    max-width: 90%;
+    left: 5%;
+    right: 5%;
+    bottom: 10px;
+  }
+}

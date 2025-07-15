@@ -1,0 +1,18 @@
+# ======= BACKEND ======= #
+backend/node_modules/
+backend/.env
+backend/dist/
+backend/*.log
+
+# ======= FRONTEND ======= #
+frontend/node_modules/
+frontend/.env
+frontend/dist/
+frontend/.next/       # Se usar Next.js
+frontend/.svelte-kit/ # Se usar SvelteKit
+
+# ======= GLOBAL ======= #
+**/.DS_Store
+**/.env.local
+**/npm-debug.log*
+**/yarn-error.log*
