@@ -28,9 +28,6 @@ import 'react-datepicker/dist/react-datepicker.css';
 import '../css/FinanceSimulator.css';
 
 function FinanceSimulatorNew() {
-  // Estados básicos
-  const [monthlyIncome, setMonthlyIncome] = useState(4600);
-  const [months, setMonths] = useState(12);
   const [highlightedSeries, setHighlightedSeries] = useState(null);
   const [loading, setLoading] = useState({
     debts: false,
@@ -119,7 +116,7 @@ function FinanceSimulatorNew() {
     savingsGoal: 300000
   });
   const [page, setPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(2);
 
   // Notificações
   const [notifications, setNotifications] = useState([]);
@@ -232,11 +229,10 @@ function FinanceSimulatorNew() {
         // Carregar informações financeiras
         const financialResponse = await api.get('/financeiro');
         setFinancialInfo({
-          monthlyIncome: Number(financialResponse.data?.monthlyIncome) || 0,
-          monthlyExpenses: Number(financialResponse.data?.monthlyExpenses) || 0,
-          savingsGoal: Number(financialResponse.data?.savingsGoal) || 300000
+          monthlyIncome: Number(financialResponse.data?.salario_mensal) || 0,
+          monthlyExpenses: Number(financialResponse.data?.meses_simulacao) || 0,
+          savingsGoal: Number(financialResponse.data?.meta_economias) || 300000
         });
-        setMonthlyIncome(Number(financialResponse.data?.monthlyIncome) || 4600);
 
       } catch (error) {
         if (isMounted) {
@@ -303,13 +299,24 @@ function FinanceSimulatorNew() {
     
     try {
       const response = await api.post("/dividas", debtToSend);
+      
+      // ✅ CORREÇÃO: Usar os dados reais do backend em vez de calcular no frontend
+      const debtData = response.data.debt || {};
+      
       const newItem = { 
         ...newDebt,
         value: Number(newDebt.value),
         id: response.data.id,
         endDate: newDebt.fixed ? null : newDebt.endDate,
         paymentMethod: newDebt.paymentMethod,
-        card: newDebt.cardId ? cards.find(c => c.id === newDebt.cardId) : null
+        card: newDebt.cardId ? cards.find(c => c.id === newDebt.cardId) : null,
+        // ✅ Usar dados reais do backend
+        pago: Boolean(debtData.pago),
+        valor_pago: Number(debtData.valor_pago) || 0,
+        // ✅ Manter compatibilidade com outros campos que podem vir do backend
+        nome: debtData.nome || newDebt.name,
+        mes_inicio: debtData.mes_inicio || newDebt.startDate,
+        mes_fim: debtData.mes_fim || newDebt.endDate
       };
       
       setDebts((prev) => [...prev, newItem]);
@@ -323,45 +330,77 @@ function FinanceSimulatorNew() {
         cardId: null,
         reserveId: null
       });
-      addNotification("Dívida adicionada com sucesso!");
+      
+      // ✅ Recarregar reservas se foi usada uma
+      if (newDebt.reserveId) {
+        const reservesResponse = await api.get('/reservas');
+        setReserves(reservesResponse.data);
+        
+        const totalResponse = await api.get('/reservas/total');
+        setTotalReserves(Number(totalResponse.data?.total) || 0);
+      }
+      
+      // ✅ Usar a mensagem do backend
+      addNotification(response.data.message || "Dívida adicionada com sucesso!");
+      
     } catch (err) {
       console.error("Erro ao adicionar dívida:", err);
       const errorMsg = err.response?.data?.error || err.message;
-      setError(`Erro ao adicionar dívida: ${errorMsg}`);
-      addNotification(`Erro ao adicionar dívida: ${errorMsg}`, 'error');
+      
+      // ✅ CORREÇÃO: Tratar erro de saldo insuficiente de forma específica
+      if (err.response?.data?.error?.includes('Saldo insuficiente')) {
+        setError(`Saldo insuficiente na reserva: ${err.response.data.details}`);
+        addNotification(`❌ ${err.response.data.details}`, 'error');
+      } else {
+        setError(`Erro ao adicionar dívida: ${errorMsg}`);
+        addNotification(`Erro ao adicionar dívida: ${errorMsg}`, 'error');
+      }
     } finally {
       setLoading(prev => ({ ...prev, addDebt: false }));
     }
   };
 
-  const handlePayDebt = async (id, amount) => {
-    if (amount <= 0) {
+  const handlePayDebt = async (id, amount, reserveId = null) => {
+    // CORREÇÃO: Garantir precisão decimal
+    const numericAmount = Number(parseFloat(amount).toFixed(2));
+    
+    if (numericAmount <= 0) {
       setError("O valor do pagamento deve ser maior que zero");
       return;
     }
 
     try {
       const response = await api.post(`/dividas/${id}/pagar`, {
-        valor_pago: amount,
+        valor_pago: numericAmount,
         metodo_pagamento: 'debito',
-        reserva_id: null // Pode ser ajustado para usar uma reserva específica
+        reserva_id: reserveId
       });
 
-      // Atualizar a lista de dívidas
-      const updatedDebts = debts.map(debt => {
-        if (debt.id === id) {
-          const newPaidValue = (debt.valor_pago || 0) + amount;
-          return {
-            ...debt,
-            valor_pago: newPaidValue,
-            pago: newPaidValue >= debt.valor
-          };
-        }
-        return debt;
-      });
+      // CORREÇÃO: Usar os dados retornados do backend em vez de calcular no frontend
+      const updatedDebt = response.data.debt;
+      
+      // Atualizar a lista de dívidas com os dados do backend
+      const updatedDebts = debts.map(debt => 
+        debt.id === id ? {
+          ...debt,
+          valor_pago: Number(updatedDebt.valor_pago) || 0,
+          pago: Boolean(updatedDebt.pago),
+          metodo_pagamento: updatedDebt.metodo_pagamento
+        } : debt
+      );
 
       setDebts(updatedDebts);
-      addNotification("Pagamento registrado com sucesso!");
+      
+      // CORREÇÃO: Recarregar reservas se foi usado uma reserva
+      if (reserveId) {
+        const reservesResponse = await api.get('/reservas');
+        setReserves(reservesResponse.data);
+        
+        const totalResponse = await api.get('/reservas/total');
+        setTotalReserves(Number(totalResponse.data?.total) || 0);
+      }
+      
+      addNotification(`Pagamento de R$ ${numericAmount.toFixed(2)} registrado com sucesso!`);
     } catch (err) {
       console.error("Erro ao registrar pagamento:", err);
       const errorMsg = err.response?.data?.error || err.message;
@@ -458,7 +497,6 @@ function FinanceSimulatorNew() {
     }
   };
 
-  // Manipulação de reservas
   const handleAddReserve = async () => {
     if (!newReserve.name.trim()) {
       setError("Informe o nome da reserva");
@@ -564,32 +602,43 @@ function FinanceSimulatorNew() {
     }
   };
 
-  // Atualizar informações financeiras
   const handleUpdateFinancialInfo = async () => {
+    const userData = localStorage.getItem('user');
+    let userId = null;
+    
+    try {
+      if (userData) {
+        const user = JSON.parse(userData);
+        userId = user.id;
+      }
+    } catch (error) {
+      console.error('Erro ao parsear user data:', error);
+    }
+
     const infoToSend = {
-      monthlyIncome: Number(monthlyIncome),
-      monthlyExpenses: Number(financialInfo.monthlyExpenses),
-      savingsGoal: Number(financialInfo.savingsGoal)
+      monthlyIncome: Number(financialInfo.monthlyIncome),
+      savingsGoal: Number(financialInfo.savingsGoal),
+      simulationMonths: Number(financialInfo.monthlyExpenses),
+      userId: userId
     };
 
+    console.log("Enviando para backend:", infoToSend);
     setLoading(prev => ({ ...prev, financialInfo: true }));
     setError(null);
     
     try {
       await api.post("/financeiro", infoToSend);
-      setFinancialInfo(infoToSend);
       addNotification("Informações financeiras atualizadas com sucesso!");
     } catch (err) {
       console.error("Erro ao atualizar informações:", err);
       setError(`Erro ao atualizar: ${err.response?.data?.message || err.message}`);
-      addNotification(`Erro ao atualizar informações: ${err.response?.data?.message || err.message}`, 'error');
     } finally {
       setLoading(prev => ({ ...prev, financialInfo: false }));
     }
   };
 
   // Gerar dados do gráfico
-  const chartData = generateChartData(monthlyIncome, months, debts, totalReserves);
+  const chartData = generateChartData(financialInfo.monthlyIncome, financialInfo.monthlyExpenses, debts, totalReserves);
 
   const filteredDebts = filterDebts(debts, debtFilters);
   const filteredReserves = filterReserves(reserves, reserveFilters);
@@ -603,7 +652,7 @@ function FinanceSimulatorNew() {
       endDate: null
     });
   };
-
+  console.log("reserves", reserves)
   const clearReserveFilters = () => {
     setReserveFilters({
       name: '',
@@ -660,10 +709,6 @@ function FinanceSimulatorNew() {
         )}
 
         <FinancialSettingsForm 
-          monthlyIncome={monthlyIncome}
-          setMonthlyIncome={setMonthlyIncome}
-          months={months}
-          setMonths={setMonths}
           financialInfo={financialInfo}
           setFinancialInfo={setFinancialInfo}
           loading={loading}
@@ -693,12 +738,16 @@ function FinanceSimulatorNew() {
           setNewDebt={setNewDebt}
           error={error}
           loading={loading}
-          paymentMethods={paymentMethods}
+          paymentMethods={{
+            ...paymentMethods,
+            cards: cards
+          }}
           reserves={reserves}
           handleAddDebt={handleAddDebt}
         />
 
         {debts.length > 0 && (
+          // No seu FinanceSimulatorNew, passe a prop reserves:
           <DebtList 
             debts={debts}
             filteredDebts={filteredDebts}
@@ -710,6 +759,7 @@ function FinanceSimulatorNew() {
             itemsPerPage={itemsPerPage}
             handleDeleteDebt={handleDeleteDebt}
             handlePayDebt={handlePayDebt}
+            reserves={reserves} // ← Esta linha é essencial
           />
         )}
 

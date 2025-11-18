@@ -18,6 +18,22 @@ const CardsForm = ({
     'Sicoob', 'Sicredi', 'Outro'
   ];
 
+  const handleInputChange = (field, value) => {
+    setNewCard(prev => ({
+      ...prev,
+      [field]: value === '' ? '' : Number(value)
+    }));
+  };
+
+  const handleNumberInputChange = (field, value) => {
+    // Para campos numéricos que não podem ser vazios (como dias)
+    const numericValue = value === '' ? 1 : Number(value);
+    setNewCard(prev => ({
+      ...prev,
+      [field]: numericValue
+    }));
+  };
+
   return (
     <div className="section">
       <h2 className="section-title">💳 Adicionar Cartão</h2>
@@ -73,8 +89,8 @@ const CardsForm = ({
               type="number"
               className="input"
               placeholder="0,00" 
-              value={newCard.limit} 
-              onChange={(e) => setNewCard({ ...newCard, limit: Number(e.target.value) })}
+              value={newCard.limit === 0 ? '' : newCard.limit}
+              onChange={(e) => handleInputChange('limit', e.target.value)}
               min="0"
               step="0.01"
             />
@@ -86,8 +102,8 @@ const CardsForm = ({
               type="number"
               className="input"
               placeholder="1-31" 
-              value={newCard.closingDay} 
-              onChange={(e) => setNewCard({ ...newCard, closingDay: Number(e.target.value) })}
+              value={newCard.closingDay}
+              onChange={(e) => handleNumberInputChange('closingDay', e.target.value)}
               min="1"
               max="31"
             />
@@ -99,8 +115,8 @@ const CardsForm = ({
               type="number"
               className="input"
               placeholder="1-31" 
-              value={newCard.dueDay} 
-              onChange={(e) => setNewCard({ ...newCard, dueDay: Number(e.target.value) })}
+              value={newCard.dueDay}
+              onChange={(e) => handleNumberInputChange('dueDay', e.target.value)}
               min="1"
               max="31"
             />

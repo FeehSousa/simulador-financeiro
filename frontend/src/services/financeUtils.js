@@ -3,8 +3,21 @@ export function generateChartData(monthlyIncome, months, debts, totalReserves) {
   const result = [];
   let accumulatedSavings = totalReserves || 0;
 
-  const earliestDebtDate = debts.length > 0 
-    ? new Date(Math.min(...debts.map(d => d.startDate))) 
+  // CORREÇÃO: Filtrar apenas dívidas não pagas OU parcialmente pagas
+  const relevantDebts = debts.filter(debt => {
+    // Se a dívida está totalmente paga, não considerar
+    if (debt.pago) return false;
+    
+    // Se a dívida tem valor pago, considerar apenas o valor restante
+    const valorPago = debt.valor_pago || 0;
+    const valorRestante = debt.value - valorPago;
+    
+    // Se já foi paga totalmente, não considerar
+    return valorRestante > 0;
+  });
+
+  const earliestDebtDate = relevantDebts.length > 0 
+    ? new Date(Math.min(...relevantDebts.map(d => d.startDate))) 
     : today;
   
   let startDate = new Date(earliestDebtDate);
@@ -17,7 +30,8 @@ export function generateChartData(monthlyIncome, months, debts, totalReserves) {
     const monthName = currentMonth.toLocaleString('default', { month: 'long' });
     const year = currentMonth.getFullYear();
     
-    const activeDebts = debts.filter(debt => {
+    // Filtrar dívidas ativas para este mês
+    const monthlyActiveDebts = relevantDebts.filter(debt => {
       const debtStart = new Date(debt.startDate);
       debtStart.setDate(1);
       
@@ -25,13 +39,22 @@ export function generateChartData(monthlyIncome, months, debts, totalReserves) {
         return debtStart <= currentMonth;
       }
       
-      const debtEnd = new Date(debt.endDate);
-      debtEnd.setDate(1);
+      const debtEnd = debt.endDate ? new Date(debt.endDate) : null;
+      if (debtEnd) {
+        debtEnd.setDate(1);
+        return currentMonth >= debtStart && currentMonth <= debtEnd;
+      }
       
-      return currentMonth >= debtStart && currentMonth <= debtEnd;
+      return currentMonth >= debtStart;
     });
     
-    const totalDebts = activeDebts.reduce((sum, debt) => sum + debt.value, 0);
+    // CORREÇÃO: Considerar apenas o valor restante das dívidas
+    const totalDebts = monthlyActiveDebts.reduce((sum, debt) => {
+      const valorPago = debt.valor_pago || 0;
+      const valorRestante = Math.max(0, debt.value - valorPago);
+      return sum + valorRestante;
+    }, 0);
+    
     const surplus = monthlyIncome - totalDebts;
     accumulatedSavings += surplus;
     

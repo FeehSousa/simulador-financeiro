@@ -1,10 +1,6 @@
 import React from 'react';
 
 const FinancialSettingsForm = ({
-  monthlyIncome,
-  setMonthlyIncome,
-  months,
-  setMonths,
   financialInfo,
   setFinancialInfo,
   loading,
@@ -19,8 +15,11 @@ const FinancialSettingsForm = ({
         <input
           type="number"
           className="input"
-          value={monthlyIncome}
-          onChange={(e) => setMonthlyIncome(Number(e.target.value))}
+          value={financialInfo.monthlyIncome}
+          onChange={(e) => setFinancialInfo({
+            ...financialInfo,
+            monthlyIncome: Number(e.target.value)
+          })}
           min="0"
           step="100"
         />
@@ -31,8 +30,11 @@ const FinancialSettingsForm = ({
         <input
           type="number"
           className="input"
-          value={months}
-          onChange={(e) => setMonths(Math.max(1, Number(e.target.value)))}
+          value={financialInfo.monthlyExpenses}
+          onChange={(e) => setFinancialInfo({
+            ...financialInfo,
+            monthlyExpenses: Math.max(1, Number(e.target.value))
+          })}
           min="1"
           max="60"
         />

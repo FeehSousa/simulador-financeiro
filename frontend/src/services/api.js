@@ -36,23 +36,21 @@ api.interceptors.request.use(config => {
   return Promise.reject(error);
 });
 
-// Interceptor de resposta com tratamento de erros de autenticação
 api.interceptors.response.use(response => {
   const endTime = new Date();
   const duration = endTime - response.config.metadata.startTime;
-  // console.log(`Resposta recebida de: ${response.config.url} (${duration}ms)`);
   return response;
 }, error => {
   if (error.response) {
-    // Tratamento específico para erros 401 (Não autorizado)
     if (error.response.status === 401) {
       console.warn('Sessão expirada ou inválida - redirecionando para login');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       
-      // Redireciona para a página de login se estivermos no navegador
+      // Use navigate em vez de window.location.href
       if (typeof window !== 'undefined') {
-        window.location.href = '/login';
+        // Vamos usar um evento customizado para notificar o componente
+        window.dispatchEvent(new CustomEvent('auth:logout'));
       }
     }
 
@@ -69,7 +67,7 @@ api.interceptors.response.use(response => {
       message: error.message
     });
   } else {
-    // console.error('Erro na configuração:', error.message);
+    console.error('Erro na configuração:', error.message);
   }
   
   return Promise.reject(error);

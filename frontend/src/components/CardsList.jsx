@@ -88,7 +88,7 @@ const CardsList = ({
                 {card.type === 'credito_debito' && 'Crédito/Débito'}
               </td>
               <td>
-                {card.limit ? `R$ ${card.limit.toFixed(2)}` : '-'}
+                {card.limit ? `R$ ${Number(card.limit).toFixed(2)}` : '-'}
               </td>
               <td>
                 {card.closingDay || '-'}

@@ -29,9 +29,9 @@ module.exports = {
 
   async createCard(req, res) {
     try {
-      const { nome, tipo, banco, limite, dia_fechamento, dia_vencimento } = req.body;
+      const { name, type, bank, limit, closingDay, dueDay } = req.body;
       
-      if (!nome || !tipo || !banco) {
+      if (!name || !type || !bank) {
         return res.status(400).json({ 
           error: 'Campos obrigatórios faltando',
           details: 'Nome, tipo e banco são obrigatórios'
@@ -39,14 +39,14 @@ module.exports = {
       }
 
       // Validações específicas para cartão de crédito
-      if (tipo === 'credito' || tipo === 'credito_debito') {
-        if (!dia_fechamento || !dia_vencimento) {
+      if (type === 'credito' || type === 'credito_debito') {
+        if (!closingDay || !dueDay) {
           return res.status(400).json({ 
             error: 'Para cartões de crédito, os dias de fechamento e vencimento são obrigatórios'
           });
         }
         
-        if (limite === undefined || limite === null) {
+        if (limit === undefined || limit === null) {
           return res.status(400).json({ 
             error: 'Para cartões de crédito, o limite é obrigatório'
           });
@@ -55,7 +55,7 @@ module.exports = {
 
       const result = await db.query(
         'INSERT INTO cartoes (nome, tipo, banco, limite, dia_fechamento, dia_vencimento, usuario_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [nome, tipo, banco, limite, dia_fechamento, dia_vencimento, req.user.id]
+        [name, type, bank, limit, closingDay, dueDay, req.user.id]
       );
 
       res.status(201).json({
@@ -102,7 +102,7 @@ module.exports = {
       const { id } = req.params;
       
       // Verificar se o cartão está sendo usado em alguma dívida
-      const [debtCheck] = await db.query(
+      const debtCheck = await db.query(
         'SELECT COUNT(*) as count FROM dividas WHERE cartao_id = ?',
         [id]
       );

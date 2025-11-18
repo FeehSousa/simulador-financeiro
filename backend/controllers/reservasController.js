@@ -126,12 +126,23 @@ module.exports = {
 
   async getTotalReservas(req, res) {
     try {
+      // VERIFIQUE qual query está sendo usada
       const [result] = await db.query(
-        'SELECT SUM(saldo_atual) AS total FROM reservas WHERE usuario_id = ?',
-        [req.user.id]
+        `SELECT 
+          COALESCE(SUM(
+            (SELECT COALESCE(SUM(valor), 0) FROM transacoes t WHERE t.reserva_id = r.id AND t.tipo = 'entrada' AND t.usuario_id = ?) -
+            (SELECT COALESCE(SUM(valor), 0) FROM transacoes t WHERE t.reserva_id = r.id AND t.tipo = 'saida' AND t.usuario_id = ?)
+          ), 0) AS total
+        FROM reservas r 
+        WHERE r.usuario_id = ?`,
+        [req.user.id, req.user.id, req.user.id]
       );
+      
+      console.log('=== TOTAL RESERVAS DEBUG ===');
+      console.log('Total calculado:', result.total);
+      
       res.json({ 
-        total: result.total || 0 
+        total: Number(result.total) || 0
       });
     } catch (error) {
       console.error('Erro ao calcular total de reservas:', error);

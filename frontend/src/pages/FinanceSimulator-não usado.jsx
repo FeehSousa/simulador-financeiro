@@ -356,11 +356,11 @@ function FinanceSimulator() {
   // Atualizar informações financeiras
   const handleUpdateFinancialInfo = async () => {
     const infoToSend = {
-      monthlyIncome: Number(monthlyIncome),
+      monthlyIncome: Number(financialInfo.monthlyIncome),
       monthlyExpenses: Number(financialInfo.monthlyExpenses),
       savingsGoal: Number(financialInfo.savingsGoal)
     };
-
+    console.log("financialInfo", financialInfo);
     setLoading(prev => ({ ...prev, financialInfo: true }));
     setError(null);
     
@@ -616,8 +616,11 @@ function FinanceSimulator() {
               <input
                 type="number"
                 className="input"
-                value={monthlyIncome}
-                onChange={(e) => setMonthlyIncome(Number(e.target.value))}
+                value={financialInfo.monthlyIncome}
+                onChange={(e) => setFinancialInfo({
+                  ...financialInfo,
+                  monthlyIncome: Number(e.target.value)
+                })}
                 min="0"
                 step="100"
               />
@@ -628,8 +631,11 @@ function FinanceSimulator() {
               <input
                 type="number"
                 className="input"
-                value={months}
-                onChange={(e) => setMonths(Math.max(1, Number(e.target.value)))}
+                value={financialInfo.simulationMonths}
+                onChange={(e) => setFinancialInfo({
+                  ...financialInfo,
+                  simulationMonths: Math.max(1, Number(e.target.value))
+                })}
                 min="1"
                 max="60"
               />

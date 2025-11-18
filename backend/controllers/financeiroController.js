@@ -16,22 +16,43 @@ module.exports = {
 
   async updateFinanceiro(req, res) {
     try {
-      const { salario_mensal = 0 } = req.body;
+      const { monthlyIncome, savingsGoal, simulationMonths } = req.body;
       
-      const [count] = await db.query(
-        'SELECT COUNT(*) AS total FROM financeiro WHERE usuario_id = ?',
+      // Buscar se já existe registro
+      const currentData = await db.query(
+        'SELECT * FROM financeiro WHERE usuario_id = ? LIMIT 1',
         [req.user.id]
       );
+      const exists = currentData.length > 0;
       
-      const query = count.total === 0
-        ? 'INSERT INTO financeiro (salario_mensal, usuario_id) VALUES (?, ?)'
-        : 'UPDATE financeiro SET salario_mensal = ? WHERE usuario_id = ?';
+      // Usar valores enviados (não preserve zeros)
+      const salario = parseFloat(monthlyIncome) || 0;
+      const meta = parseFloat(savingsGoal) || 0;
+      const meses = parseInt(simulationMonths) || 12;
       
-      await db.query(query, [parseFloat(salario_mensal), req.user.id]);
+      console.log('Dados recebidos:', { monthlyIncome, savingsGoal, simulationMonths });
+      console.log('Dados processados:', { salario, meta, meses });
+      console.log('Registro existe:', exists);
+      
+      if (exists) {
+        // UPDATE do registro existente
+        await db.query(
+          'UPDATE financeiro SET salario_mensal = ?, meta_economias = ?, meses_simulacao = ? WHERE usuario_id = ?',
+          [salario, meta, meses, req.user.id ]
+        );
+      } else {
+        // INSERT do novo registro
+        await db.query(
+          'INSERT INTO financeiro (usuario_id, salario_mensal, meta_economias, meses_simulacao) VALUES (?, ?, ?, ?)',
+          [req.user.id, salario, meta, meses]
+        );
+      }
       
       res.json({ 
         success: true,
-        salario_mensal: parseFloat(salario_mensal)
+        salario_mensal: salario,
+        meta_economias: meta,
+        meses_simulacao: meses
       });
     } catch (error) {
       console.error('Erro ao atualizar dados financeiros:', error);
